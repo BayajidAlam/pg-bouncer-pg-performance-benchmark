@@ -1,0 +1,101 @@
+- name: Install PostgreSQL
+  apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+    state: present
+    update_cache: true
+
+- name: Get PostgreSQL version
+  shell: ls /etc/postgresql/ | head -n1
+  register: pg_version
+  changed_when: false
+
+- name: Configure PostgreSQL - listen_addresses
+  lineinfile:
+    path: "/etc/postgresql/{{ pg_version.stdout }}/main/postgresql.conf"
+    regexp: '^#?listen_addresses\s*='
+    line: "listen_addresses = '*'"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  notify: restart postgresql
+
+- name: Configure PostgreSQL - max_connections
+  lineinfile:
+    path: "/etc/postgresql/{{ pg_version.stdout }}/main/postgresql.conf"
+    regexp: '^#?max_connections\s*='
+    line: "max_connections = {{ postgresql_max_connections | default(100) }}"
+  notify: restart postgresql
+
+- name: Configure PostgreSQL - password_encryption
+  lineinfile:
+    path: "/etc/postgresql/{{ pg_version.stdout }}/main/postgresql.conf"
+    regexp: '^#?password_encryption\s*='
+    line: "password_encryption = md5"
+  notify: restart postgresql
+
+- name: Configure pg_hba.conf
+  template:
+    src: pg_hba.conf.j2
+    dest: "/etc/postgresql/{{ pg_version.stdout }}/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  notify: restart postgresql
+
+- name: Ensure PostgreSQL is enabled and started
+  systemd:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Wait for PostgreSQL to be ready
+  wait_for:
+    port: 5432
+    delay: 5
+    timeout: 30
+
+- name: Create database
+  become_user: postgres
+  postgresql_db:
+    name: "{{ db_name }}"
+    state: present
+
+- name: Create database user
+  become_user: postgres
+  postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    encrypted: true
+    state: present
+
+- name: Grant all privileges on database to user
+  become_user: postgres
+  postgresql_privs:
+    database: "{{ db_name }}"
+    roles: "{{ db_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Grant schema permissions to user
+  become_user: postgres
+  postgresql_privs:
+    database: "{{ db_name }}"
+    roles: "{{ db_user }}"
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    schema: public
+    type: table
+
+- name: Grant sequence permissions to user
+  become_user: postgres
+  postgresql_privs:
+    database: "{{ db_name }}"
+    roles: "{{ db_user }}"
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    schema: public
+    type: sequence

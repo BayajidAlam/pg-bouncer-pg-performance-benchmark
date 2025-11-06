@@ -1,0 +1,47 @@
+---
+- name: Complete PgBouncer Infrastructure Setup
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Display setup start message
+      debug:
+        msg: "Starting complete PgBouncer infrastructure setup..."
+
+- name: Setup Database Server (PostgreSQL + PgBouncer + Exporters)
+  import_playbook: setup-db-server.yml
+
+- name: Setup Monitoring Server (Prometheus + Grafana)
+  import_playbook: setup-monitoring.yml
+
+- name: Final verification
+  hosts: localhost
+  gather_facts: false
+
+  tasks:
+    - name: Display completion message
+      debug:
+        msg: |
+          ========================================
+          Setup Complete!
+          ========================================
+
+          Database Server:
+          - PostgreSQL: Port 5432
+          - PgBouncer: Port 6432
+          - PostgreSQL Exporter: Port 9187
+          - PgBouncer Exporter: Port 9127
+
+          Monitoring Server:
+          - Prometheus: http://{{ hostvars['monitoring-server']['ansible_host'] }}:9090
+          - Grafana: http://{{ hostvars['monitoring-server']['ansible_host'] }}:3000
+            Username: admin
+            Password: admin
+
+          Next Steps:
+          1. Access Grafana dashboard
+          2. Import PostgreSQL dashboard (ID: 9628)
+          3. Import PgBouncer dashboard (ID: 13125)
+          4. Run benchmark tests with pgbench
+
+          ========================================

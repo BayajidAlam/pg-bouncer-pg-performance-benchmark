@@ -1,0 +1,90 @@
+---
+- name: Download PostgreSQL Exporter
+  get_url:
+    url: "https://github.com/prometheus-community/postgres_exporter/releases/download/v0.15.0/postgres_exporter-0.15.0.linux-amd64.tar.gz"
+    dest: "/tmp/postgres_exporter.tar.gz"
+    mode: "0644"
+
+- name: Extract PostgreSQL Exporter
+  unarchive:
+    src: "/tmp/postgres_exporter.tar.gz"
+    dest: "/tmp/"
+    remote_src: true
+
+- name: Move PostgreSQL Exporter binary
+  copy:
+    src: "/tmp/postgres_exporter-0.15.0.linux-amd64/postgres_exporter"
+    dest: "/usr/local/bin/postgres_exporter"
+    mode: "0755"
+    remote_src: true
+
+- name: Download PgBouncer Exporter
+  get_url:
+    url: "https://github.com/prometheus-community/pgbouncer_exporter/releases/download/v0.10.2/pgbouncer_exporter-0.10.2.linux-amd64.tar.gz"
+    dest: "/tmp/pgbouncer_exporter.tar.gz"
+    mode: "0644"
+
+- name: Extract PgBouncer Exporter
+  unarchive:
+    src: "/tmp/pgbouncer_exporter.tar.gz"
+    dest: "/tmp/"
+    remote_src: true
+
+- name: Move PgBouncer Exporter binary
+  copy:
+    src: "/tmp/pgbouncer_exporter-0.10.2.linux-amd64/pgbouncer_exporter"
+    dest: "/usr/local/bin/pgbouncer_exporter"
+    mode: "0755"
+    remote_src: true
+
+- name: Create systemd service for PostgreSQL Exporter
+  template:
+    src: postgres-exporter.service.j2
+    dest: /etc/systemd/system/postgres-exporter.service
+    mode: "0644"
+  notify: restart postgres exporter
+
+- name: Create systemd service for PgBouncer Exporter
+  template:
+    src: pgbouncer-exporter.service.j2
+    dest: /etc/systemd/system/pgbouncer-exporter.service
+    mode: "0644"
+  notify: restart pgbouncer exporter
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: true
+
+- name: Enable and start PostgreSQL Exporter
+  systemd:
+    name: postgres-exporter
+    state: started
+    enabled: true
+
+- name: Enable and start PgBouncer Exporter
+  systemd:
+    name: pgbouncer-exporter
+    state: started
+    enabled: true
+
+- name: Wait for PostgreSQL Exporter to be ready
+  wait_for:
+    port: 9187
+    delay: 5
+    timeout: 30
+
+- name: Wait for PgBouncer Exporter to be ready
+  wait_for:
+    port: 9127
+    delay: 5
+    timeout: 30
+
+- name: Cleanup temporary files
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/postgres_exporter.tar.gz
+    - /tmp/postgres_exporter-0.15.0.linux-amd64
+    - /tmp/pgbouncer_exporter.tar.gz
+    - /tmp/pgbouncer_exporter-0.10.2.linux-amd64

@@ -1,0 +1,45 @@
+# Prometheus Configuration
+# Managed by Ansible
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'pgbouncer-cluster'
+    environment: 'production'
+
+# Alertmanager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Scrape configurations
+scrape_configs:
+  # PostgreSQL Exporter
+  - job_name: 'postgresql'
+    static_configs:
+      - targets: ['{{ db_server_ip }}:9187']
+        labels:
+          instance: 'db-server'
+          service: 'postgresql'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # PgBouncer Exporter
+  - job_name: 'pgbouncer'
+    static_configs:
+      - targets: ['{{ db_server_ip }}:9127']
+        labels:
+          instance: 'db-server'
+          service: 'pgbouncer'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          instance: 'monitoring-server'
+          service: 'prometheus'

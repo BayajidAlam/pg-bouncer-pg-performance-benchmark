@@ -1,0 +1,22 @@
+---
+- name: Setup PostgreSQL Database Server
+  hosts: db
+  become: true
+  gather_facts: true
+
+  vars:
+    monitoring_server_ip: "{{ hostvars['monitoring-server']['ansible_host'] }}"
+    db_name: "mydb"
+    db_user: "myuser"
+    db_password: "mypassword"
+    postgresql_max_connections: 100
+
+  roles:
+    - postgres
+    - pgbouncer
+    - exporters
+
+  tasks:
+    - name: Display setup completion message
+      debug:
+        msg: "PostgreSQL, PgBouncer, and Exporters setup completed successfully!"

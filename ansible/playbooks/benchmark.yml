@@ -1,0 +1,99 @@
+---
+- name: Setup and Run PgBouncer Benchmark Tests
+  hosts: db
+  become: true
+  gather_facts: true
+
+  vars:
+    db_name: "mydb"
+    db_user: "myuser"
+    db_password: "mypassword"
+    pgbouncer_port: 6432
+
+  tasks:
+    - name: Initialize pgbench database
+      become_user: postgres
+      shell: |
+        PGPASSWORD={{ db_password }} pgbench -h localhost -p {{ pgbouncer_port }} -U {{ db_user }} -i {{ db_name }}
+      environment:
+        PGPASSWORD: "{{ db_password }}"
+      register: pgbench_init
+      changed_when: false
+      failed_when: false
+
+    - name: Display pgbench initialization result
+      debug:
+        var: pgbench_init.stdout_lines
+      when: pgbench_init.stdout_lines is defined
+
+    - name: Run basic benchmark (10 clients, 100 transactions)
+      become_user: postgres
+      shell: |
+        PGPASSWORD={{ db_password }} pgbench -h localhost -p {{ pgbouncer_port }} -U {{ db_user }} -c 10 -j 2 -t 100 {{ db_name }}
+      environment:
+        PGPASSWORD: "{{ db_password }}"
+      register: basic_benchmark
+      changed_when: false
+
+    - name: Display basic benchmark results
+      debug:
+        msg: "{{ basic_benchmark.stdout_lines }}"
+
+    - name: Run load test (50 clients, 1000 transactions)
+      become_user: postgres
+      shell: |
+        PGPASSWORD={{ db_password }} pgbench -h localhost -p {{ pgbouncer_port }} -U {{ db_user }} -c 50 -j 4 -t 1000 {{ db_name }}
+      environment:
+        PGPASSWORD: "{{ db_password }}"
+      register: load_test
+      changed_when: false
+
+    - name: Display load test results
+      debug:
+        msg: "{{ load_test.stdout_lines }}"
+
+    - name: Check PgBouncer statistics
+      become_user: postgres
+      shell: |
+        PGPASSWORD={{ db_password }} psql -h localhost -p {{ pgbouncer_port }} -U {{ db_user }} -d pgbouncer -c "SHOW STATS;"
+      environment:
+        PGPASSWORD: "{{ db_password }}"
+      register: pgbouncer_stats
+      changed_when: false
+
+    - name: Display PgBouncer statistics
+      debug:
+        msg: "{{ pgbouncer_stats.stdout_lines }}"
+
+    - name: Check pool status
+      become_user: postgres
+      shell: |
+        PGPASSWORD={{ db_password }} psql -h localhost -p {{ pgbouncer_port }} -U {{ db_user }} -d pgbouncer -c "SHOW POOLS;"
+      environment:
+        PGPASSWORD: "{{ db_password }}"
+      register: pool_status
+      changed_when: false
+
+    - name: Display pool status
+      debug:
+        msg: "{{ pool_status.stdout_lines }}"
+
+    - name: Summary
+      debug:
+        msg: |
+          ========================================
+          Benchmark Testing Complete!
+          ========================================
+
+          Check the following metrics in Grafana:
+          - Active connections
+          - Query throughput
+          - Transaction rate
+          - Connection pool utilization
+          - Query latency
+
+          To run custom benchmarks:
+          ssh db-server
+          PGPASSWORD={{ db_password }} pgbench -h localhost -p {{ pgbouncer_port }} -U {{ db_user }} -c <clients> -j <threads> -t <transactions> {{ db_name }}
+
+          ========================================

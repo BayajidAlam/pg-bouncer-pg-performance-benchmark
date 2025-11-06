@@ -1,0 +1,17 @@
+[Unit]
+Description=PgBouncer Exporter
+After=network.target pgbouncer.service
+Wants=pgbouncer.service
+
+[Service]
+Type=simple
+User=postgres
+Group=postgres
+ExecStart=/usr/local/bin/pgbouncer_exporter \
+  --pgBouncer.connectionString="postgresql://{{ db_user }}:{{ db_password }}@localhost:6432/pgbouncer?sslmode=disable" \
+  --web.listen-address=:9127
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

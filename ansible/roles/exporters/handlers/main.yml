@@ -1,0 +1,10 @@
+---
+- name: restart postgres exporter
+  systemd:
+    name: postgres-exporter
+    state: restarted
+
+- name: restart pgbouncer exporter
+  systemd:
+    name: pgbouncer-exporter
+    state: restarted

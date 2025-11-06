@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Pulumi
+.pulumi/
+
+# Ansible
+*.retry
+
+# SSH Keys
+*.pem
+*.id_rsa
+*.key
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Environment
+.env
+
+# OS
+.DS_Store

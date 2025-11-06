@@ -1,0 +1,16 @@
+[Unit]
+Description=PostgreSQL Exporter
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=postgres
+Group=postgres
+Environment="DATA_SOURCE_NAME=postgresql://{{ db_user }}:{{ db_password }}@localhost:5432/{{ db_name }}?sslmode=disable"
+ExecStart=/usr/local/bin/postgres_exporter --web.listen-address=:9187
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

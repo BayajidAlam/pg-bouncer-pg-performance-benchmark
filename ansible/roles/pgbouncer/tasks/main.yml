@@ -1,0 +1,47 @@
+---
+- name: Install PgBouncer
+  apt:
+    name: pgbouncer
+    state: present
+    update_cache: true
+
+- name: Stop PgBouncer for configuration
+  systemd:
+    name: pgbouncer
+    state: stopped
+
+- name: Configure PgBouncer
+  template:
+    src: pgbouncer.ini.j2
+    dest: /etc/pgbouncer/pgbouncer.ini
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  notify: restart pgbouncer
+
+- name: Generate MD5 password hash for userlist
+  shell: echo -n "{{ db_password }}{{ db_user }}" | md5sum | awk '{print "md5" $1}'
+  register: md5_password
+  changed_when: false
+
+- name: Create userlist.txt from template
+  template:
+    src: userlist.txt.j2
+    dest: /etc/pgbouncer/userlist.txt
+    owner: postgres
+    group: postgres
+    mode: "0600"
+  vars:
+    md5_hash: "{{ md5_password.stdout }}"
+
+- name: Ensure PgBouncer is enabled and started
+  systemd:
+    name: pgbouncer
+    state: started
+    enabled: true
+
+- name: Wait for PgBouncer to be ready
+  wait_for:
+    port: 6432
+    delay: 5
+    timeout: 30

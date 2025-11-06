@@ -1,0 +1,19 @@
+---
+- name: Setup Monitoring Server with Prometheus and Grafana
+  hosts: monitoring
+  become: true
+  gather_facts: true
+
+  vars:
+    db_server_ip: "{{ hostvars[groups['db'][0]]['ansible_host'] }}"
+
+  roles:
+    - prometheus
+
+  tasks:
+    - name: Display monitoring setup completion
+      debug:
+        msg: |
+          Monitoring server setup completed!
+          - Prometheus available at: http://{{ ansible_host }}:9090
+          - Grafana available at: http://{{ ansible_host }}:3000
